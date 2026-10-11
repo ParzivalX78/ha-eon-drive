@@ -58,15 +58,25 @@ V dalším kroku vyhledáš lokality (podle města nebo názvu) a vybereš, kter
 sledovat. Krok jde přeskočit a lokality přidat později.
 
 V **Nastavení integrace** pak můžeš lokality přidávat a odebírat a měnit interval
-aktualizace (výchozí 5 minut, minimum 1 minuta). Dotazuj se střídmě.
+aktualizace (výchozí 10 minut, minimum 5 minut, maximum 1 hodina).
 
-## Jak to funguje
+## Jak to funguje a jak šetrně se ptá
 
-- Přihlášení: OAuth2 password grant, token se drží jen v paměti. Když ho server
-  odmítne, integrace se přihlásí znovu; při změně hesla nabídne nové přihlášení.
-- Každý cyklus: jeden dotaz na stav všech sledovaných lokalit a jeden na
-  probíhající nabíjení.
-- Historie se stahuje jednou za 30 minut a hned po skončení nabíjení.
+Integrace je navržená tak, aby dělala výrazně méně dotazů než samotná aplikace
+(ta jich jen při spuštění pošle kolem třiceti).
+
+- **Dva dotazy za cyklus:** jeden na stav všech sledovaných lokalit najednou,
+  jeden na probíhající nabíjení. Při výchozích 10 minutách je to zhruba
+  300 dotazů denně.
+- **Historie** se stahuje jednou za hodinu a hned po skončení nabíjení.
+- **Přihlášení jen když je potřeba:** token (platnost rok) se ukládá do
+  `.storage` Home Assistantu, takže restart ani reload nové přihlášení nedělá.
+  Znovu se přihlásí jen jednou, když server token odmítne. Když neprojde ani to,
+  integrace přestane a požádá o nové heslo, nezkouší to dokola.
+- **Zpomalení při potížích:** po chybě nebo odpovědi „příliš mnoho požadavků“
+  (HTTP 429) se interval zdvojnásobí, respektuje `Retry-After` a roste nejvýše
+  na hodinu. Po prvním úspěchu se vrátí na nastavenou hodnotu.
+- Čte jen tvoje vlastní data a údaje, které aplikace ukazuje každému na mapě.
 - Heslo a client secret jsou uložené v konfiguraci Home Assistantu
   (`.storage`), stejně jako u jiných integrací.
 

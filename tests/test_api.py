@@ -6,13 +6,17 @@ from datetime import date
 
 import pytest
 
-from custom_components.eon_drive.api import EonDriveAuthError, EonDriveClient
+from custom_components.eon_drive.api import (
+    EonDriveAuthError,
+    EonDriveClient,
+    EonDriveRateLimitError,
+)
 from custom_components.eon_drive.const import BASE_URL
 
 
 class _Resp:
-    def __init__(self, status, data):
-        self.status, self._data = status, data
+    def __init__(self, status, data, headers=None):
+        self.status, self._data, self.headers = status, data, headers or {}
 
     async def __aenter__(self):
         return self
@@ -88,3 +92,24 @@ async def test_no_locations_makes_no_request():
     session = _Session([])
     assert await _client(session).get_locations([]) == {"locations": [], "tariffs": []}
     assert session.calls == []
+
+
+async def test_rate_limit_is_reported_with_retry_after():
+    session = _Session([(200, {"access_token": "t"}), (429, {}, {"Retry-After": "120"})])
+    with pytest.raises(EonDriveRateLimitError) as err:
+        await _client(session).get_ongoing_sessions()
+    assert err.value.retry_after == 120
+    assert len(session.calls) == 2  # no retry storm
+
+
+async def test_existing_token_skips_login_and_new_token_is_reported():
+    seen = []
+    session = _Session([(200, {"data": []}), (401, {}), (200, {"access_token": "fresh"}), (200, {"data": []})])
+    client = EonDriveClient(
+        session, username="u", password="p", client_id="1", client_secret="s",
+        device_id="DEV", token="stored", on_token=seen.append,
+    )
+    await client.get_ongoing_sessions()
+    assert len(session.calls) == 1 and session.calls[0][2]["headers"]["Authorization"] == "Bearer stored"
+    await client.get_ongoing_sessions()
+    assert seen == ["fresh"]

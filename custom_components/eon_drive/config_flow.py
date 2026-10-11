@@ -18,7 +18,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from . import create_client
+from . import PENDING_TOKENS, create_client
 from .api import EonDriveAuthError, EonDriveClient, EonDriveError
 from .const import (
     CONF_CLIENT_ID,
@@ -162,6 +162,9 @@ class EonDriveConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     def _create(self, locations: list[str]) -> ConfigFlowResult:
+        if self._client is not None and isinstance(self._client.token, str) and self.unique_id:
+            # Reuse the token from this login instead of logging in again at setup.
+            self.hass.data.setdefault(PENDING_TOKENS, {})[self.unique_id] = self._client.token
         return self.async_create_entry(
             title=self._data[CONF_USERNAME],
             data=self._data,
@@ -181,8 +184,11 @@ class EonDriveConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
         if user_input is not None:
             data = {**entry.data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
-            error = await _try_login(create_client(self.hass, data))
+            client = create_client(self.hass, data)
+            error = await _try_login(client)
             if error is None:
+                if isinstance(client.token, str):
+                    self.hass.data.setdefault(PENDING_TOKENS, {})[entry.entry_id] = client.token
                 return self.async_update_reload_and_abort(entry, data=data)
             errors["base"] = error
         return self.async_show_form(

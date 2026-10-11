@@ -7,6 +7,7 @@ mobile app itself makes when browsing chargers and charging history.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -35,6 +36,14 @@ class EonDriveConnectionError(EonDriveError):
     """The API could not be reached."""
 
 
+class EonDriveRateLimitError(EonDriveError):
+    """The API asked us to slow down (HTTP 429)."""
+
+    def __init__(self, retry_after: int | None = None) -> None:
+        super().__init__("Rate limited by E.ON Drive")
+        self.retry_after = retry_after
+
+
 class EonDriveClient:
     """Minimal async client for the E.ON Drive app API."""
 
@@ -47,6 +56,8 @@ class EonDriveClient:
         client_id: str,
         client_secret: str,
         device_id: str,
+        token: str | None = None,
+        on_token: Callable[[str], None] | None = None,
     ) -> None:
         self._session = session
         self._username = username
@@ -54,8 +65,14 @@ class EonDriveClient:
         self._client_id = client_id
         self._client_secret = client_secret
         self._device_id = device_id
-        self._token: str | None = None
+        self._token = token
+        self._on_token = on_token
         self._login_lock = asyncio.Lock()
+
+    @property
+    def token(self) -> str | None:
+        """Current access token, if any."""
+        return self._token
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -91,6 +108,11 @@ class EonDriveClient:
                 timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
             ) as resp:
                 status = resp.status
+                if status == 429:
+                    retry_after = resp.headers.get("Retry-After", "")
+                    raise EonDriveRateLimitError(
+                        int(retry_after) if retry_after.isdigit() else None
+                    )
                 if status == 204:
                     return status, None
                 try:
@@ -121,6 +143,8 @@ class EonDriveClient:
             if status != 200 or not isinstance(data, dict) or "access_token" not in data:
                 raise EonDriveError(f"Unexpected login response (HTTP {status})")
             self._token = data["access_token"]
+            if self._on_token is not None:
+                self._on_token(self._token)
 
     async def _request(
         self,
@@ -134,7 +158,7 @@ class EonDriveClient:
             await self.login()
         status, data = await self._raw(method, path, params=params, json=json)
         if status == 401:
-            # Token expired or was revoked: log in once more and retry.
+            # Token expired or was revoked: log in once (never in a loop) and retry.
             await self.login()
             status, data = await self._raw(method, path, params=params, json=json)
             if status == 401:

@@ -20,12 +20,15 @@ CONF_LOCATIONS = "locations"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_QUERY = "query"
 
-DEFAULT_SCAN_INTERVAL = 300
-MIN_SCAN_INTERVAL = 60
+# Be a polite client: far fewer requests than the app itself makes.
+DEFAULT_SCAN_INTERVAL = 600
+MIN_SCAN_INTERVAL = 300
 MAX_SCAN_INTERVAL = 3600
+# Upper bound for the automatic back-off after errors / rate limiting.
+MAX_BACKOFF = 3600
 
 # Charging history changes rarely; refresh it less often than charger status.
-HISTORY_INTERVAL = timedelta(minutes=30)
+HISTORY_INTERVAL = timedelta(hours=1)
 REQUEST_TIMEOUT = 30
 
 EVSE_STATES = [

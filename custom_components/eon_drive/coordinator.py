@@ -12,13 +12,19 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import EonDriveAuthError, EonDriveClient, EonDriveError
+from .api import (
+    EonDriveAuthError,
+    EonDriveClient,
+    EonDriveError,
+    EonDriveRateLimitError,
+)
 from .const import (
     CONF_LOCATIONS,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     HISTORY_INTERVAL,
+    MAX_BACKOFF,
 )
 from .models import Location, Session, Tariff, parse_locations, summarize_month
 
@@ -64,9 +70,16 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
             ),
         )
         self.client = client
+        self._base_interval = self.update_interval
         self._history: list[Session] = []
         self._history_at: datetime | None = None
         self._had_ongoing = False
+
+    def _back_off(self, retry_after: int | None) -> None:
+        """Slow down after a failure: double the interval, honour Retry-After."""
+        current = (self.update_interval or self._base_interval).total_seconds()
+        seconds = max(current * 2, retry_after or 0)
+        self.update_interval = timedelta(seconds=min(seconds, MAX_BACKOFF))
 
     async def _async_update_data(self) -> EonDriveData:
         now = dt_util.now()
@@ -89,8 +102,15 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
             self._had_ongoing = ongoing is not None
         except EonDriveAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
+        except EonDriveRateLimitError as err:
+            self._back_off(err.retry_after)
+            raise UpdateFailed(
+                f"Rate limited, next attempt in {self.update_interval}"
+            ) from err
         except EonDriveError as err:
+            self._back_off(None)
             raise UpdateFailed(str(err)) from err
+        self.update_interval = self._base_interval
 
         locations, tariffs = parse_locations(payload)
         # Only expose what the user selected, whatever the API decides to return.

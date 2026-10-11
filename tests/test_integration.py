@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -62,7 +64,7 @@ async def _setup(hass: HomeAssistant, locations=("1001",)) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=ENTRY_DATA,
-        options={"locations": list(locations), "scan_interval": 300},
+        options={"locations": list(locations), "scan_interval": 600},
         unique_id="driver@example.com",
     )
     entry.add_to_hass(hass)
@@ -155,21 +157,66 @@ async def test_options_add_and_remove(hass: HomeAssistant, mock_client) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["step_id"] == "init"
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"locations": ["1001"], "query": "sec", "scan_interval": 120}
+        result["flow_id"], {"locations": ["1001"], "query": "sec", "scan_interval": 900}
     )
     assert result["step_id"] == "add"
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"locations": ["1002"]}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options == {"locations": ["1001", "1002"], "scan_interval": 120}
+    assert entry.options == {"locations": ["1001", "1002"], "scan_interval": 900}
     await hass.async_block_till_done()
 
     # Remove everything: location device must disappear, account stays.
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"locations": [], "scan_interval": 120}
+        result["flow_id"], {"locations": [], "scan_interval": 900}
     )
     await hass.async_block_till_done()
     assert entry.options["locations"] == []
     assert len(dr.async_entries_for_config_entry(device_reg, entry.entry_id)) == 1
+
+
+async def test_backoff_and_recovery(hass: HomeAssistant, mock_client) -> None:
+    from datetime import timedelta
+
+    from custom_components.eon_drive.api import EonDriveError, EonDriveRateLimitError
+
+    entry = await _setup(hass)
+    coordinator = entry.runtime_data
+    assert coordinator.update_interval == timedelta(seconds=600)
+
+    mock_client.get_locations.side_effect = EonDriveRateLimitError(None)
+    await coordinator.async_refresh()
+    assert coordinator.update_interval == timedelta(seconds=1200)
+    mock_client.get_locations.side_effect = EonDriveRateLimitError(3000)
+    await coordinator.async_refresh()
+    assert coordinator.update_interval == timedelta(seconds=3000)
+    mock_client.get_locations.side_effect = EonDriveError("HTTP 503")
+    await coordinator.async_refresh()
+    assert coordinator.update_interval == timedelta(seconds=3600)  # capped
+
+    mock_client.get_locations.side_effect = None
+    await coordinator.async_refresh()
+    assert coordinator.last_update_success
+    assert coordinator.update_interval == timedelta(seconds=600)
+
+
+async def test_token_is_reused_across_restarts(hass: HomeAssistant, hass_storage) -> None:
+    """A stored token must be handed to the client so no login is needed."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, options={"locations": []}, unique_id="driver@example.com"
+    )
+    entry.add_to_hass(hass)
+    hass_storage[f"{DOMAIN}.{entry.entry_id}"] = {
+        "version": 1, "minor_version": 1, "key": f"{DOMAIN}.{entry.entry_id}",
+        "data": {"access_token": "stored-token"},
+    }
+    with patch("custom_components.eon_drive.EonDriveClient", autospec=True) as cls:
+        cls.return_value.get_locations.return_value = {"locations": [], "tariffs": []}
+        cls.return_value.get_ongoing_sessions.return_value = []
+        cls.return_value.get_session_history.return_value = []
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert cls.call_args.kwargs["token"] == "stored-token"
+    cls.return_value.login.assert_not_called()
