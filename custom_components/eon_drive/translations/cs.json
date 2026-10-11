@@ -1,0 +1,126 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "E.ON Drive",
+        "description": "Přihlas se účtem E.ON Drive. Client ID a client secret jsou konstanty mobilní aplikace; jak je získat, je popsáno v README.",
+        "data": {
+          "username": "E-mail",
+          "password": "Heslo",
+          "client_id": "Client ID",
+          "client_secret": "Client secret"
+        }
+      },
+      "search": {
+        "title": "Najít nabíječky",
+        "description": "Vyhledej lokalitu podle města nebo názvu. Pole můžeš nechat prázdné a lokality přidat později v nastavení.",
+        "data": {
+          "query": "Hledat"
+        }
+      },
+      "select": {
+        "title": "Výběr lokalit",
+        "data": {
+          "locations": "Sledované lokality"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Nové přihlášení",
+        "description": "Heslo pro {username} už není platné.",
+        "data": {
+          "password": "Heslo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Přihlášení bylo odmítnuto. Zkontroluj e-mail, heslo, client ID a client secret.",
+      "cannot_connect": "Nepodařilo se spojit s E.ON Drive.",
+      "no_results": "Žádná lokalita nenalezena.",
+      "unknown": "Neočekávaná chyba."
+    },
+    "abort": {
+      "already_configured": "Tento účet je už nastavený.",
+      "reauth_successful": "Přihlášení obnoveno."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nastavení E.ON Drive",
+        "data": {
+          "locations": "Sledované lokality",
+          "query": "Vyhledat lokalitu k přidání",
+          "scan_interval": "Interval aktualizace"
+        },
+        "data_description": {
+          "locations": "Odškrtnutím přestaneš lokalitu sledovat.",
+          "query": "Nech prázdné, pokud chceš jen uložit změny výše."
+        }
+      },
+      "add": {
+        "title": "Přidat lokality",
+        "data": {
+          "locations": "Lokality k přidání"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nepodařilo se spojit s E.ON Drive.",
+      "no_results": "Žádná nová lokalita nenalezena."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "charging": {
+        "name": "Nabíjení"
+      }
+    },
+    "sensor": {
+      "charging_power": {
+        "name": "Nabíjecí výkon"
+      },
+      "charging_energy": {
+        "name": "Nabitá energie"
+      },
+      "charging_cost": {
+        "name": "Cena nabíjení"
+      },
+      "charging_soc": {
+        "name": "Baterie vozu"
+      },
+      "last_session_energy": {
+        "name": "Poslední nabíjení – energie"
+      },
+      "last_session_cost": {
+        "name": "Poslední nabíjení – cena"
+      },
+      "last_session_start": {
+        "name": "Poslední nabíjení – začátek"
+      },
+      "month_energy": {
+        "name": "Energie tento měsíc"
+      },
+      "month_cost": {
+        "name": "Útrata tento měsíc"
+      },
+      "available_count": {
+        "name": "Volné stojany",
+        "unit_of_measurement": "stojanů"
+      },
+      "evse_status": {
+        "name": "{evse}",
+        "state": {
+          "available": "Volný",
+          "charging": "Nabíjí",
+          "preparing": "Připravuje se",
+          "finishing": "Dokončuje",
+          "suspended": "Pozastaveno",
+          "reserved": "Rezervováno",
+          "unavailable": "Nedostupný",
+          "out_of_order": "Mimo provoz",
+          "unknown": "Neznámý"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+ "data": [
+  {
+   "session": {
+    "id": "9003",
+    "startedAt": "2026-10-10T21:44:09+00:00",
+    "stoppedAt": "2026-10-10T22:20:11+00:00",
+    "duration": 1800,
+    "totalDuration": 1800,
+    "energy": 40000,
+    "power": 0,
+    "locationId": 1001,
+    "evseId": "CZ*TST*E1*1",
+    "amount": 320.0,
+    "totalAmount": 320.0,
+    "status": "finished",
+    "carBatteryPercent": 80,
+    "currencyId": 2,
+    "currency": {
+     "id": 2,
+     "code": "CZK"
+    }
+   },
+   "note": "",
+   "type": "public",
+   "address": "Testovací 1",
+   "evse": {
+    "identifier": "CZ*TST*E1*1",
+    "label": null
+   }
+  },
+  {
+   "session": {
+    "id": "9002",
+    "startedAt": "2026-10-02T05:38:19+00:00",
+    "stoppedAt": "2026-10-02T06:10:00+00:00",
+    "duration": 1800,
+    "totalDuration": 1800,
+    "energy": 20500,
+    "power": 0,
+    "locationId": 1001,
+    "evseId": "CZ*TST*E1*1",
+    "amount": 164.0,
+    "totalAmount": 164.0,
+    "status": "finished",
+    "carBatteryPercent": 80,
+    "currencyId": 2,
+    "currency": {
+     "id": 2,
+     "code": "CZK"
+    }
+   },
+   "note": "",
+   "type": "public",
+   "address": "Testovací 1",
+   "evse": {
+    "identifier": "CZ*TST*E1*1",
+    "label": null
+   }
+  },
+  {
+   "session": {
+    "id": "9001",
+    "startedAt": "2026-09-30T22:30:00+00:00",
+    "stoppedAt": "2026-09-30T23:00:00+00:00",
+    "duration": 1800,
+    "totalDuration": 1800,
+    "energy": 10000,
+    "power": 0,
+    "locationId": 1001,
+    "evseId": "CZ*TST*E1*1",
+    "amount": 95.0,
+    "totalAmount": 95.0,
+    "status": "finished",
+    "carBatteryPercent": 80,
+    "currencyId": 2,
+    "currency": {
+     "id": 2,
+     "code": "CZK"
+    }
+   },
+   "note": "",
+   "type": "public",
+   "address": "Testovací 1",
+   "evse": {
+    "identifier": "CZ*TST*E1*1",
+    "label": null
+   }
+  }
+ ],
+ "pagination": {
+  "currentPage": 1,
+  "lastPage": 1,
+  "perPage": 100,
+  "total": 3
+ }
+}

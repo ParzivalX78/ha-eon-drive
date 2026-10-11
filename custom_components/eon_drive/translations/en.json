@@ -1,0 +1,126 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "E.ON Drive",
+        "description": "Sign in with your E.ON Drive account. The client ID and client secret are constants of the mobile app; see the README for how to obtain them.",
+        "data": {
+          "username": "E-mail",
+          "password": "Password",
+          "client_id": "Client ID",
+          "client_secret": "Client secret"
+        }
+      },
+      "search": {
+        "title": "Find chargers",
+        "description": "Search for a charging location by city or name. Leave empty to skip; you can add locations later in the options.",
+        "data": {
+          "query": "Search"
+        }
+      },
+      "select": {
+        "title": "Select locations",
+        "data": {
+          "locations": "Locations to track"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "The password for {username} is no longer accepted.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Sign-in was rejected. Check the e-mail, password, client ID and client secret.",
+      "cannot_connect": "Could not reach E.ON Drive.",
+      "no_results": "No location found.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Signed in again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "E.ON Drive options",
+        "data": {
+          "locations": "Tracked locations",
+          "query": "Search for a location to add",
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "locations": "Untick a location to stop tracking it.",
+          "query": "Leave empty to only save the changes above."
+        }
+      },
+      "add": {
+        "title": "Add locations",
+        "data": {
+          "locations": "Locations to add"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach E.ON Drive.",
+      "no_results": "No new location found."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "charging": {
+        "name": "Charging"
+      }
+    },
+    "sensor": {
+      "charging_power": {
+        "name": "Charging power"
+      },
+      "charging_energy": {
+        "name": "Charging energy"
+      },
+      "charging_cost": {
+        "name": "Charging cost"
+      },
+      "charging_soc": {
+        "name": "Vehicle battery"
+      },
+      "last_session_energy": {
+        "name": "Last session energy"
+      },
+      "last_session_cost": {
+        "name": "Last session cost"
+      },
+      "last_session_start": {
+        "name": "Last session start"
+      },
+      "month_energy": {
+        "name": "Energy this month"
+      },
+      "month_cost": {
+        "name": "Cost this month"
+      },
+      "available_count": {
+        "name": "Available chargers",
+        "unit_of_measurement": "chargers"
+      },
+      "evse_status": {
+        "name": "{evse}",
+        "state": {
+          "available": "Available",
+          "charging": "Charging",
+          "preparing": "Preparing",
+          "finishing": "Finishing",
+          "suspended": "Suspended",
+          "reserved": "Reserved",
+          "unavailable": "Unavailable",
+          "out_of_order": "Out of order",
+          "unknown": "Unknown"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,134 @@
+{
+ "locations": [
+  {
+   "id": 1001,
+   "name": "Test Hub ",
+   "address": "Testovací 1",
+   "city": "Testov",
+   "description": null,
+   "location": "50.1000000,14.2000000",
+   "zones": [
+    {
+     "id": 1,
+     "evses": [
+      {
+       "id": "11",
+       "identifier": "CZ*TST*E1*1",
+       "emi3Identifier": null,
+       "label": null,
+       "networkId": "1",
+       "maxPower": 90000,
+       "currentType": "dc",
+       "status": "available",
+       "isAvailable": true,
+       "isTemporarilyUnavailable": false,
+       "isLongTermUnavailable": false,
+       "tariffId": "501",
+       "connectors": [
+        {
+         "id": "111",
+         "name": "CCS 2",
+         "icon": "ccs 2",
+         "format": "cable",
+         "status": "active"
+        }
+       ],
+       "capabilities": [
+        "REMOTE_START_STOP_CAPABLE"
+       ]
+      },
+      {
+       "id": "12",
+       "identifier": "CZ*TST*E1*2",
+       "emi3Identifier": null,
+       "label": null,
+       "networkId": "1",
+       "maxPower": 62500,
+       "currentType": "dc",
+       "status": "out of order",
+       "isAvailable": false,
+       "isTemporarilyUnavailable": false,
+       "isLongTermUnavailable": false,
+       "tariffId": "501",
+       "connectors": [
+        {
+         "id": "112",
+         "name": "CHAdeMO",
+         "icon": "chademo",
+         "format": "cable",
+         "status": "active"
+        }
+       ],
+       "capabilities": [
+        "REMOTE_START_STOP_CAPABLE"
+       ]
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "evses": [
+      {
+       "id": "13",
+       "identifier": "CZ*TST*E1*3",
+       "emi3Identifier": null,
+       "label": null,
+       "networkId": "1",
+       "maxPower": 22000,
+       "currentType": "ac",
+       "status": "charging",
+       "isAvailable": false,
+       "isTemporarilyUnavailable": false,
+       "isLongTermUnavailable": false,
+       "tariffId": "502",
+       "connectors": [
+        {
+         "id": "113",
+         "name": "Type 2",
+         "icon": "type 2",
+         "format": "cable",
+         "status": "active"
+        }
+       ],
+       "capabilities": [
+        "REMOTE_START_STOP_CAPABLE"
+       ]
+      }
+     ]
+    }
+   ],
+   "updatedAt": "2026-01-01 00:00:00.000",
+   "workingHours": [],
+   "timezone": "Europe/Prague",
+   "facilities": []
+  }
+ ],
+ "tariffs": [
+  {
+   "id": "501",
+   "currencyCode": "CZK",
+   "priceForEnergy": null,
+   "priceForEnergyAtNight": 8,
+   "priceForEnergyAtDay": 9.5,
+   "priceForDuration": null,
+   "priceForDurationAtNight": 0,
+   "priceForDurationAtDay": 2,
+   "dayTariffStart": "08:00:00",
+   "nightTariffStart": "20:00:00",
+   "priceType": "duration+energy time of day"
+  },
+  {
+   "id": "502",
+   "currencyCode": "CZK",
+   "priceForEnergy": 16,
+   "priceForEnergyAtNight": null,
+   "priceForEnergyAtDay": null,
+   "priceForDuration": 2,
+   "priceForDurationAtNight": null,
+   "priceForDurationAtDay": null,
+   "dayTariffStart": null,
+   "nightTariffStart": null,
+   "priceType": "duration+energy"
+  }
+ ]
+}

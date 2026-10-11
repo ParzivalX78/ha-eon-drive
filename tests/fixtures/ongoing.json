@@ -1,0 +1,24 @@
+{
+ "data": [
+  {
+   "id": "9004",
+   "startedAt": "2026-10-12T10:00:00+00:00",
+   "stoppedAt": null,
+   "duration": 1800,
+   "totalDuration": 1800,
+   "energy": 12345,
+   "power": 75500,
+   "locationId": 1001,
+   "evseId": "CZ*TST*E1*1",
+   "amount": 98.76,
+   "totalAmount": 98.76,
+   "status": "active",
+   "carBatteryPercent": 42,
+   "currencyId": 2,
+   "currency": {
+    "id": 2,
+    "code": "CZK"
+   }
+  }
+ ]
+}
