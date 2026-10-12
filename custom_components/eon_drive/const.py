@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 DOMAIN = "eon_drive"
 
@@ -29,6 +29,11 @@ MAX_BACKOFF = 3600
 
 # Charging history changes rarely; refresh it less often than charger status.
 HISTORY_INTERVAL = timedelta(hours=1)
+# The whole history is downloaded once (for long-term statistics), afterwards only
+# the recent window. If the server refuses the long range, try again a day later.
+HISTORY_START = date(2015, 1, 1)
+HISTORY_MAX_PAGES = 50
+FULL_HISTORY_RETRY = timedelta(days=1)
 REQUEST_TIMEOUT = 30
 
 EVSE_STATES = [

@@ -1,6 +1,7 @@
 {
   "domain": "eon_drive",
   "name": "E.ON Drive",
+  "after_dependencies": ["recorder"],
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/ParzivalX78/ha-eon-drive",
@@ -8,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ParzivalX78/ha-eon-drive/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

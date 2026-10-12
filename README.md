@@ -28,6 +28,57 @@ Pro účet (zařízení „E.ON Drive“):
 | poslední nabíjení – energie, cena, začátek | poslední dokončená relace |
 | energie tento měsíc, útrata tento měsíc | součet relací zahájených v aktuálním měsíci |
 
+Dlouhodobé statistiky (pro grafy po dnech, týdnech, měsících, letech):
+
+| Statistika | Popis |
+|---|---|
+| `eon_drive:charged_energy` | nabitá energie v kWh |
+| `eon_drive:charging_cost` | cena nabíjení v měně účtu (CZK) |
+
+Plní se z **celé historie nabíjení na účtu**, takže grafy ukazují i měsíce
+před instalací integrace. Nabíjení se počítá do hodiny, kdy začalo.
+
+## Grafy
+
+Na nástěnku přidej kartu (**Upravit → Přidat kartu → Ruční**):
+
+```yaml
+type: vertical-stack
+cards:
+  - type: horizontal-stack
+    cards:
+      - type: statistic
+        name: Nabito tento měsíc
+        entity: eon_drive:charged_energy
+        stat_type: change
+        period:
+          calendar:
+            period: month
+      - type: statistic
+        name: Útrata tento měsíc
+        entity: eon_drive:charging_cost
+        stat_type: change
+        period:
+          calendar:
+            period: month
+  - type: statistics-graph
+    title: Nabitá energie po měsících
+    entities:
+      - eon_drive:charged_energy
+    stat_types: [change]
+    period: month
+    chart_type: bar
+    days_to_show: 365
+  - type: statistics-graph
+    title: Útrata za nabíjení po měsících
+    entities:
+      - eon_drive:charging_cost
+    stat_types: [change]
+    period: month
+    chart_type: bar
+    days_to_show: 365
+```
+
 ## Instalace
 
 ### HACS
@@ -68,7 +119,10 @@ Integrace je navržená tak, aby dělala výrazně méně dotazů než samotná 
 - **Dva dotazy za cyklus:** jeden na stav všech sledovaných lokalit najednou,
   jeden na probíhající nabíjení. Při výchozích 10 minutách je to zhruba
   300 dotazů denně.
-- **Historie** se stahuje jednou za hodinu a hned po skončení nabíjení.
+- **Historie** se stahuje jednou za hodinu a hned po skončení nabíjení, vždy jen
+  za poslední dva měsíce. Celá historie účtu se stáhne **jen jednou** (po stránkách
+  po 100 relacích) a uloží do `.storage`; když server tak dlouhé období odmítne,
+  zkusí to integrace znovu za den.
 - **Přihlášení jen když je potřeba:** token (platnost rok) se ukládá do
   `.storage` Home Assistantu, takže restart ani reload nové přihlášení nedělá.
   Znovu se přihlásí jen jednou, když server token odmítne. Když neprojde ani to,

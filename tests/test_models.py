@@ -1,10 +1,11 @@
 """Parsing tests against payloads shaped like the real API."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from custom_components.eon_drive.models import (
     Session,
+    hourly_totals,
     normalize_status,
     parse_locations,
     summarize_month,
@@ -71,3 +72,16 @@ def test_month_summary_uses_local_month():
     assert (energy, cost, count) == (70.5, 579.0, 3)
     energy, cost, count = summarize_month(sessions, datetime(2026, 9, 30, 12, 0, tzinfo=PRG))
     assert count == 0
+
+
+def test_hourly_totals():
+    sessions = [Session.from_api(i) for i in load("history")["data"]]
+    same_hour = Session.from_api(
+        {"session": {"id": "9004", "startedAt": "2026-10-10T21:59:00+00:00",
+                     "energy": 1500, "totalAmount": 12.5}}
+    )
+    assert hourly_totals([*sessions, same_hour]) == [
+        (datetime(2026, 9, 30, 22, tzinfo=UTC), 10.0, 95.0),
+        (datetime(2026, 10, 2, 5, tzinfo=UTC), 20.5, 164.0),
+        (datetime(2026, 10, 10, 21, tzinfo=UTC), 41.5, 332.5),
+    ]

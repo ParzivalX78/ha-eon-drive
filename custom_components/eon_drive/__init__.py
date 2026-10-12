@@ -14,6 +14,7 @@ from .api import EonDriveClient
 from .const import CONF_CLIENT_ID, CONF_CLIENT_SECRET, CONF_DEVICE_ID, DOMAIN
 from .coordinator import EonDriveConfigEntry, EonDriveCoordinator, tracked_location_ids
 from .entity import account_identifier, location_identifier
+from .statistics import SessionArchive, async_clear_statistics
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
@@ -88,8 +89,10 @@ async def _async_reload(hass: HomeAssistant, entry: EonDriveConfigEntry) -> None
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: EonDriveConfigEntry) -> None:
-    """Forget the stored token when the integration is removed."""
+    """Forget the stored token, session archive and statistics."""
     await token_store(hass, entry.entry_id).async_remove()
+    await SessionArchive(hass, entry.entry_id).async_remove()
+    async_clear_statistics(hass)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: EonDriveConfigEntry) -> bool:

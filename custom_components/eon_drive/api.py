@@ -198,18 +198,36 @@ class EonDriveClient:
         return {}
 
     async def get_session_history(
-        self, start: date, end: date, per_page: int = 100
+        self, start: date, end: date, *, per_page: int = 100, max_pages: int = 1
     ) -> list[dict[str, Any]]:
-        """Return finished sessions between two dates (first page)."""
-        data = await self._request(
-            "GET",
-            "/profile/session_history",
-            params={
-                "start_date": start.isoformat(),
-                "end_date": end.isoformat(),
-                "page": 1,
-                "perPage": per_page,
-            },
-        )
-        items = data.get("data", []) if isinstance(data, dict) else []
-        return [i for i in items if isinstance(i, dict)]
+        """Return finished sessions between two dates.
+
+        Reads at most ``max_pages`` pages: one is plenty for the regular refresh,
+        the one-off download of the whole history follows the pagination.
+        """
+        items: list[dict[str, Any]] = []
+        for page in range(1, max_pages + 1):
+            data = await self._request(
+                "GET",
+                "/profile/session_history",
+                params={
+                    "start_date": start.isoformat(),
+                    "end_date": end.isoformat(),
+                    "page": page,
+                    "perPage": per_page,
+                },
+            )
+            if not isinstance(data, dict):
+                break
+            page_items = [i for i in data.get("data") or [] if isinstance(i, dict)]
+            items.extend(page_items)
+            pagination = data.get("pagination")
+            last_page = pagination.get("lastPage") if isinstance(pagination, dict) else None
+            if not page_items:
+                break
+            if isinstance(last_page, int):
+                if page >= last_page:
+                    break
+            elif len(page_items) < per_page:
+                break
+        return items

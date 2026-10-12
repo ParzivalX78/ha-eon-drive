@@ -88,6 +88,17 @@ async def test_history_params():
     }
 
 
+async def test_history_follows_pagination():
+    def page(n):
+        return {"data": [{"session": {"id": str(n)}}], "pagination": {"currentPage": n, "lastPage": 2}}
+
+    session = _Session([(200, {"access_token": "t"}), (200, page(1)), (200, page(2))])
+    client = _client(session)
+    items = await client.get_session_history(date(2015, 1, 1), date(2026, 10, 12), max_pages=50)
+    assert [i["session"]["id"] for i in items] == ["1", "2"]
+    assert [call[2]["params"]["page"] for call in session.calls[1:]] == [1, 2]
+
+
 async def test_no_locations_makes_no_request():
     session = _Session([])
     assert await _client(session).get_locations([]) == {"locations": [], "tariffs": []}

@@ -2,20 +2,35 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
+import pytest
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.components.recorder.common import (
+    async_wait_recording_done,
+)
 
-from custom_components.eon_drive.api import EonDriveAuthError
+from custom_components.eon_drive.api import EonDriveAuthError, EonDriveError
 from custom_components.eon_drive.const import DOMAIN
+from custom_components.eon_drive.statistics import STAT_COST, STAT_ENERGY
 
 from .conftest import load
+
+
+@pytest.fixture
+def mock_recorder_before_hass(async_test_recorder) -> None:
+    """Prepare the recorder database before hass starts (statistics tests)."""
+
 
 USER_INPUT = {
     "username": "driver@example.com",
@@ -178,9 +193,7 @@ async def test_options_add_and_remove(hass: HomeAssistant, mock_client) -> None:
 
 
 async def test_backoff_and_recovery(hass: HomeAssistant, mock_client) -> None:
-    from datetime import timedelta
-
-    from custom_components.eon_drive.api import EonDriveError, EonDriveRateLimitError
+    from custom_components.eon_drive.api import EonDriveRateLimitError
 
     entry = await _setup(hass)
     coordinator = entry.runtime_data
@@ -220,3 +233,84 @@ async def test_token_is_reused_across_restarts(hass: HomeAssistant, hass_storage
         await hass.async_block_till_done()
     assert cls.call_args.kwargs["token"] == "stored-token"
     cls.return_value.login.assert_not_called()
+
+
+OLDER_SESSION = {
+    "session": {
+        "id": "8001", "startedAt": "2026-08-15T16:10:00+00:00", "energy": 30000,
+        "totalAmount": 250.0, "currency": {"code": "CZK"},
+    },
+    "address": "Testovací 1",
+}
+
+
+async def test_statistics_from_whole_history(
+    recorder_mock, hass: HomeAssistant, mock_client, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Prague")
+    freezer.move_to("2026-10-12 10:00:00+00:00")
+    mock_client.get_session_history.return_value = [*load("history")["data"], OLDER_SESSION]
+    entry = await _setup(hass)
+
+    # The whole history is downloaded once ...
+    call = mock_client.get_session_history.await_args
+    assert call.args[0] == date(2015, 1, 1)
+    assert call.kwargs["max_pages"] == 50
+    assert entry.runtime_data.archive.complete
+    await async_wait_recording_done(hass)
+
+    stats = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        datetime(2026, 7, 31, 22, tzinfo=dt_util.UTC),
+        None,
+        {STAT_ENERGY, STAT_COST},
+        "month",
+        None,
+        {"sum", "change"},
+    )
+    # 9001 started 2026-09-30 22:30 UTC, which is already October in Prague.
+    assert [(r["sum"], r["change"]) for r in stats[STAT_ENERGY]] == [(30.0, 30.0), (100.5, 70.5)]
+    assert [(r["sum"], r["change"]) for r in stats[STAT_COST]] == [(250.0, 250.0), (829.0, 579.0)]
+
+    # ... afterwards only the recent window is refreshed.
+    freezer.tick(timedelta(hours=2))
+    await entry.runtime_data.async_refresh()
+    call = mock_client.get_session_history.await_args
+    assert call.args[0] == date(2026, 7, 31)
+    assert "max_pages" not in call.kwargs
+
+
+async def test_full_history_failure_falls_back_to_recent_window(
+    hass: HomeAssistant, mock_client, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Prague")
+    freezer.move_to("2026-10-12 10:00:00+00:00")
+    mock_client.get_session_history.side_effect = [
+        EonDriveError("HTTP 422"),
+        load("history")["data"],
+    ]
+    entry = await _setup(hass)
+    assert entry.state is ConfigEntryState.LOADED
+    first, second = mock_client.get_session_history.await_args_list
+    assert first.kwargs["max_pages"] == 50
+    assert "max_pages" not in second.kwargs
+    assert not entry.runtime_data.archive.complete
+    assert _state(hass, entry, "month_energy").state == "70.5"
+
+
+async def test_archive_survives_restart(hass: HomeAssistant, hass_storage, mock_client) -> None:
+    """With a complete archive in storage, no full download happens again."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, options={"locations": []}, unique_id="driver@example.com"
+    )
+    entry.add_to_hass(hass)
+    hass_storage[f"{DOMAIN}.{entry.entry_id}.sessions"] = {
+        "version": 1, "minor_version": 1, "key": f"{DOMAIN}.{entry.entry_id}.sessions",
+        "data": {"complete": True, "items": {"8001": OLDER_SESSION}},
+    }
+    mock_client.get_session_history.return_value = []
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert "max_pages" not in mock_client.get_session_history.await_args.kwargs
+    assert _state(hass, entry, "last_session_energy").state == "30.0"

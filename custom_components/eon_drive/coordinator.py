@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -15,6 +16,7 @@ from homeassistant.util import dt as dt_util
 from .api import (
     EonDriveAuthError,
     EonDriveClient,
+    EonDriveConnectionError,
     EonDriveError,
     EonDriveRateLimitError,
 )
@@ -23,10 +25,14 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    FULL_HISTORY_RETRY,
     HISTORY_INTERVAL,
+    HISTORY_MAX_PAGES,
+    HISTORY_START,
     MAX_BACKOFF,
 )
 from .models import Location, Session, Tariff, parse_locations, summarize_month
+from .statistics import SessionArchive, async_import_statistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,16 +76,51 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
             ),
         )
         self.client = client
+        self.archive = SessionArchive(hass, entry.entry_id)
         self._base_interval = self.update_interval
-        self._history: list[Session] = []
         self._history_at: datetime | None = None
+        self._full_history_retry: datetime | None = None
+        self._statistics_current = False
         self._had_ongoing = False
+
+    async def _async_setup(self) -> None:
+        await self.archive.async_load()
 
     def _back_off(self, retry_after: int | None) -> None:
         """Slow down after a failure: double the interval, honour Retry-After."""
         current = (self.update_interval or self._base_interval).total_seconds()
         seconds = max(current * 2, retry_after or 0)
         self.update_interval = timedelta(seconds=min(seconds, MAX_BACKOFF))
+
+    async def _fetch_history(self, now: datetime) -> tuple[list[dict[str, Any]], bool]:
+        """Download the whole history once, afterwards only the recent window.
+
+        Returns the sessions and whether they are the complete history.
+        """
+        if not self.archive.complete and (
+            self._full_history_retry is None or now >= self._full_history_retry
+        ):
+            try:
+                raw = await self.client.get_session_history(
+                    HISTORY_START, now.date(), max_pages=HISTORY_MAX_PAGES
+                )
+            except (EonDriveAuthError, EonDriveRateLimitError, EonDriveConnectionError):
+                raise
+            except EonDriveError as err:
+                # The server may refuse such a long range; keep working with the
+                # recent window and try again later.
+                _LOGGER.warning(
+                    "Downloading the whole charging history failed (%s), "
+                    "trying again in %s",
+                    err,
+                    FULL_HISTORY_RETRY,
+                )
+                self._full_history_retry = now + FULL_HISTORY_RETRY
+            else:
+                return raw, True
+        # Go back far enough to always include the previous month.
+        start = (now.replace(day=1) - timedelta(days=62)).date()
+        return await self.client.get_session_history(start, now.date()), False
 
     async def _async_update_data(self) -> EonDriveData:
         now = dt_util.now()
@@ -94,10 +135,9 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
                 self._history_at is None or now - self._history_at >= HISTORY_INTERVAL
             )
             if history_stale or session_ended:
-                # Go back far enough to always include the previous session.
-                start = (now.replace(day=1) - timedelta(days=62)).date()
-                raw = await self.client.get_session_history(start, now.date())
-                self._history = [Session.from_api(item) for item in raw]
+                raw, complete = await self._fetch_history(now)
+                if self.archive.merge(raw, complete=complete):
+                    self._statistics_current = False
                 self._history_at = now
             self._had_ongoing = ongoing is not None
         except EonDriveAuthError as err:
@@ -115,16 +155,15 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
         locations, tariffs = parse_locations(payload)
         # Only expose what the user selected, whatever the API decides to return.
         locations = {k: v for k, v in locations.items() if k in tracked}
-        finished = sorted(
-            (s for s in self._history if s.started_at is not None),
-            key=lambda s: s.started_at,
-            reverse=True,
-        )
+        finished = self.archive.sessions()
         energy, cost, count = summarize_month(finished, now)
         currency = next(
             (t.currency for t in tariffs.values() if t.currency),
             next((s.currency for s in finished if s.currency), None),
         )
+        if not self._statistics_current:
+            async_import_statistics(self.hass, finished, currency or "CZK")
+            self._statistics_current = True
         return EonDriveData(
             locations=locations,
             tariffs=tariffs,

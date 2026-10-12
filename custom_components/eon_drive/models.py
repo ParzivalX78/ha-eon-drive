@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import UTC, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -266,6 +267,22 @@ class Session:
             address=item.get("address"),
             currency=currency.get("code") if isinstance(currency, dict) else None,
         )
+
+
+def hourly_totals(sessions: Iterable[Session]) -> list[tuple[datetime, float, float]]:
+    """Return (UTC hour, kWh, cost) per hour in which sessions started, oldest first."""
+    buckets: dict[datetime, list[float]] = {}
+    for session in sessions:
+        if session.started_at is None:
+            continue
+        hour = session.started_at.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+        bucket = buckets.setdefault(hour, [0.0, 0.0])
+        bucket[0] += session.energy_kwh or 0.0
+        bucket[1] += session.amount or 0.0
+    return [
+        (hour, round(energy, 3), round(cost, 2))
+        for hour, (energy, cost) in sorted(buckets.items())
+    ]
 
 
 def summarize_month(sessions: list[Session], local_now: datetime) -> tuple[float, float, int]:
