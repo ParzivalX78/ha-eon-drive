@@ -3,10 +3,10 @@
   "name": "E.ON Drive",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://github.com/OWNER/ha-eon-drive",
+  "documentation": "https://github.com/ParzivalX78/ha-eon-drive",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/OWNER/ha-eon-drive/issues",
+  "issue_tracker": "https://github.com/ParzivalX78/ha-eon-drive/issues",
   "requirements": [],
   "version": "0.1.0"
 }
