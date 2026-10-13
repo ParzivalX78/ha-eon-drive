@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -81,6 +81,7 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
         self._history_at: datetime | None = None
         self._full_history_retry: datetime | None = None
         self._statistics_current = False
+        self._statistics_day: date | None = None
         self._had_ongoing = False
 
     async def _async_setup(self) -> None:
@@ -161,9 +162,11 @@ class EonDriveCoordinator(DataUpdateCoordinator[EonDriveData]):
             (t.currency for t in tariffs.values() if t.currency),
             next((s.currency for s in finished if s.currency), None),
         )
-        if not self._statistics_current:
-            async_import_statistics(self.hass, finished, currency or "CZK")
+        # Again on a new day too, for that day's row (see models.day_ends()).
+        if not self._statistics_current or self._statistics_day != now.date():
+            async_import_statistics(self.hass, finished, currency or "CZK", now)
             self._statistics_current = True
+            self._statistics_day = now.date()
         return EonDriveData(
             locations=locations,
             tariffs=tariffs,

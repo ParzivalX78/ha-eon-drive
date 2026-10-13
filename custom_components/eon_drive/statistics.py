@@ -7,6 +7,7 @@ first session on the account, not just to the day the integration was added.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.recorder import get_instance
@@ -21,7 +22,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN
-from .models import Session, hourly_totals
+from .models import Session, day_ends, hourly_totals
 
 STAT_ENERGY = f"{DOMAIN}:charged_energy"
 STAT_COST = f"{DOMAIN}:charging_cost"
@@ -84,15 +85,17 @@ def recorder_available(hass: HomeAssistant) -> bool:
 
 @callback
 def async_import_statistics(
-    hass: HomeAssistant, sessions: list[Session], currency: str
+    hass: HomeAssistant, sessions: list[Session], currency: str, local_now: datetime
 ) -> None:
-    """Write cumulative hourly energy and cost of all sessions."""
+    """Write cumulative hourly energy and cost of all sessions (plus a row per day)."""
     if not recorder_available(hass):
         return
+    started = [s.started_at for s in sessions if s.started_at is not None]
+    extra = day_ends(min(started), local_now) if started else []
     energy_rows: list[StatisticData] = []
     cost_rows: list[StatisticData] = []
     energy_sum = cost_sum = 0.0
-    for hour, energy, cost in hourly_totals(sessions):
+    for hour, energy, cost in hourly_totals(sessions, extra):
         energy_sum += energy
         cost_sum += cost
         energy_rows.append(StatisticData(start=hour, state=energy, sum=round(energy_sum, 3)))

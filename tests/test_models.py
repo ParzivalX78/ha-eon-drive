@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from custom_components.eon_drive.models import (
     Session,
+    day_ends,
     hourly_totals,
     normalize_status,
     parse_locations,
@@ -85,3 +86,13 @@ def test_hourly_totals():
         (datetime(2026, 10, 2, 5, tzinfo=UTC), 20.5, 164.0),
         (datetime(2026, 10, 10, 21, tzinfo=UTC), 41.5, 332.5),
     ]
+
+
+def test_day_ends_give_every_day_a_row():
+    ends = day_ends(datetime(2026, 9, 29, 8, 0, tzinfo=UTC), datetime(2026, 10, 2, 12, 0, tzinfo=PRG))
+    assert [(d.month, d.day, d.hour) for d in ends] == [(9, 29, 23), (9, 30, 23), (10, 1, 23)]
+    assert ends[1].astimezone(UTC).hour == 21
+    sessions = [Session.from_api(i) for i in load("history")["data"]]
+    rows = hourly_totals(sessions, ends)
+    # 2026-09-30 23:00 Prague = 21:00 UTC (empty), the session at 22:30 UTC follows.
+    assert rows[1] == (datetime(2026, 9, 30, 21, tzinfo=UTC), 0.0, 0.0)

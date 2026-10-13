@@ -8,7 +8,10 @@ from unittest.mock import patch
 import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.components.recorder.statistics import (
+    statistic_during_period,
+    statistics_during_period,
+)
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -270,8 +273,21 @@ async def test_statistics_from_whole_history(
         {"sum", "change"},
     )
     # 9001 started 2026-09-30 22:30 UTC, which is already October in Prague.
-    assert [(r["sum"], r["change"]) for r in stats[STAT_ENERGY]] == [(30.0, 30.0), (100.5, 70.5)]
-    assert [(r["sum"], r["change"]) for r in stats[STAT_COST]] == [(250.0, 250.0), (829.0, 579.0)]
+    assert [(r["sum"], r["change"]) for r in stats[STAT_ENERGY]] == [
+        (30.0, 30.0), (30.0, 0.0), (100.5, 70.5),
+    ]
+    assert [(r["sum"], r["change"]) for r in stats[STAT_COST]] == [
+        (250.0, 250.0), (250.0, 0.0), (829.0, 579.0),
+    ]
+
+    # "This month" as the statistic card asks for it: the change since the row of
+    # the hour before the month, which the daily rows provide.
+    october = datetime(2026, 9, 30, 22, tzinfo=dt_util.UTC)
+    for statistic_id, expected in ((STAT_ENERGY, 70.5), (STAT_COST, 579.0)):
+        result = await get_instance(hass).async_add_executor_job(
+            statistic_during_period, hass, october, None, statistic_id, {"change"}, None
+        )
+        assert result["change"] == expected
 
     # ... afterwards only the recent window is refreshed.
     freezer.tick(timedelta(hours=2))

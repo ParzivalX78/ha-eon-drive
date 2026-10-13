@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -269,16 +269,43 @@ class Session:
         )
 
 
-def hourly_totals(sessions: Iterable[Session]) -> list[tuple[datetime, float, float]]:
-    """Return (UTC hour, kWh, cost) per hour in which sessions started, oldest first."""
+def day_ends(first: datetime, local_now: datetime) -> list[datetime]:
+    """23:00 local time of every day from `first` up to yesterday.
+
+    Home Assistant takes the start of a period's change from the row of the hour
+    before the period; a row at the last hour of every day gives every day, week,
+    month and year that row, even when nothing was charged.
+    """
+    tz = local_now.tzinfo
+    day = first.astimezone(tz).date()
+    ends = []
+    while day < local_now.date():
+        ends.append(datetime.combine(day, time(23), tzinfo=tz))
+        day += timedelta(days=1)
+    return ends
+
+
+def hourly_totals(
+    sessions: Iterable[Session], extra_hours: Iterable[datetime] = ()
+) -> list[tuple[datetime, float, float]]:
+    """Return (UTC hour, kWh, cost) per hour in which sessions started, oldest first.
+
+    `extra_hours` get a row too (with nothing added), see day_ends().
+    """
     buckets: dict[datetime, list[float]] = {}
+
+    def bucket(moment: datetime) -> list[float]:
+        hour = moment.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+        return buckets.setdefault(hour, [0.0, 0.0])
+
+    for moment in extra_hours:
+        bucket(moment)
     for session in sessions:
         if session.started_at is None:
             continue
-        hour = session.started_at.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
-        bucket = buckets.setdefault(hour, [0.0, 0.0])
-        bucket[0] += session.energy_kwh or 0.0
-        bucket[1] += session.amount or 0.0
+        values = bucket(session.started_at)
+        values[0] += session.energy_kwh or 0.0
+        values[1] += session.amount or 0.0
     return [
         (hour, round(energy, 3), round(cost, 2))
         for hour, (energy, cost) in sorted(buckets.items())
