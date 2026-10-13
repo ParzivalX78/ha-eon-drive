@@ -64,7 +64,8 @@ cards:
   - type: statistics-graph
     title: Nabitá energie po měsících
     entities:
-      - eon_drive:charged_energy
+      - entity: eon_drive:charged_energy
+        color: "#4269d0"
     stat_types: [change]
     period: month
     chart_type: bar
@@ -72,12 +73,17 @@ cards:
   - type: statistics-graph
     title: Útrata za nabíjení po měsících
     entities:
-      - eon_drive:charging_cost
+      - entity: eon_drive:charging_cost
+        color: "#4269d0"
     stat_types: [change]
     period: month
     chart_type: bar
     days_to_show: 365
 ```
+
+Barva `#4269d0` je modrá z palety Home Assistantu; integrace PRE Point používá
+žlutou `#f4bd4a`, takže ve společném grafu (stačí přidat obě statistiky do
+`entities`) jsou sítě vždy odlišené stejně.
 
 ## Instalace
 
