@@ -2,6 +2,8 @@
 
 [![Podpoř mě na Ko-fi](https://img.shields.io/badge/Ko--fi-kup%20mi%20kafe-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/parzival59520)
 
+🇬🇧 **English:** [see below](#english).
+
 Neoficiální integrace veřejné nabíjecí sítě **E.ON Drive (CZ)** do Home Assistantu.
 Čte stejná data jako mobilní aplikace: stav vybraných nabíjecích stojanů, probíhající
 nabíjení a historii nabíjení na tvém účtu.
@@ -86,6 +88,21 @@ cards:
 Barva `#4269d0` je modrá z palety Home Assistantu; integrace PRE Point používá
 žlutou `#f4bd4a`, takže ve společném grafu (stačí přidat obě statistiky do
 `entities`) jsou sítě vždy odlišené stejně.
+
+## Upozornění a odpovědnost
+
+- Integrace je **neoficiální**. Nemá žádnou vazbu na společnost E.ON, ta ji nevytvořila,
+  neschválila ani nepodporuje. Používá nedokumentovaná rozhraní, která se mohou kdykoli
+  změnit nebo přestat fungovat.
+- Používáš ji **výhradně na vlastní riziko a odpovědnost**. Autor neodpovídá za žádné škody
+  ani důsledky jejího použití, zejména za **omezení nebo zablokování účtu**, chybné nebo
+  chybějící údaje (např. o ceně nebo stavu nabíjení) ani za porušení podmínek služby.
+- Totéž platí pro **jakékoli úpravy kódu nebo nastavení**, hlavně pro zkrácení intervalu
+  dotazů pod výchozí hodnoty. Tím zvyšuješ zátěž serverů provozovatele i riziko zablokování
+  a odpovídáš za to sám.
+- Před použitím si přečti podmínky služby E.ON Drive a sám posuď, jestli je s nimi
+  používání integrace v souladu.
+- Software je poskytován „tak, jak je“, bez jakékoli záruky (viz licence MIT).
 
 ## Instalace
 
@@ -173,3 +190,76 @@ Chyby a nápady piš do [Issues](../../issues).
 MIT, viz [LICENSE](LICENSE).
 
 Made together with Claude (Anthropic).
+
+---
+
+## English
+
+Unofficial Home Assistant integration for the **E.ON Drive (Czech Republic)** public EV
+charging network. It reads the same data as the mobile app: the status of selected charging
+locations, the ongoing charging session and the charging history of your account. It is
+**read-only**: it never starts, stops or reserves charging.
+
+### What you get
+
+- **Per location:** number of free chargers and the state of each charger (free, charging,
+  out of order…), with power, connectors and prices in the attributes.
+- **Account:** charging now (on/off), power, charged energy, cost and car battery of the
+  ongoing session; the last finished session; energy and cost this month.
+- **Long-term statistics** `eon_drive:charged_energy` (kWh) and `eon_drive:charging_cost`
+  (CZK), built from the **whole** charging history of the account, so charts show months
+  before the integration was installed. The YAML for the charts is in the Czech part above.
+
+### Installation
+
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ParzivalX78&repository=ha-eon-drive&category=integration)
+
+Or HACS → ⋮ → **Custom repositories** → add this repository's URL, category **Integration**,
+install „E.ON Drive“ and restart Home Assistant. Manual install: copy
+`custom_components/eon_drive` to `config/custom_components/` and restart.
+
+### Setup
+
+**Settings → Devices & services → Add integration → E.ON Drive.** You need:
+
+- the e-mail and password of your E.ON Drive account,
+- the mobile app's **client ID** and **client secret**. They are deliberately not in this
+  repository; capture them from your own app traffic (e.g. with
+  [mitmproxy](https://mitmproxy.org)): on sign-in the app sends `POST /api/v1/app/oauth/token`
+  with `client_id` and `client_secret` in the body.
+
+Then search for and pick the locations to follow (can be skipped and changed later in the
+options). Update interval: 10 minutes by default, 5–60 minutes allowed.
+
+### Gentle on the server
+
+Two requests per cycle, history once an hour, the sign-in token is stored and reused, and
+the interval doubles (up to one hour, honouring `Retry-After`) after errors or HTTP 429.
+
+### Disclaimer
+
+- This integration is **unofficial**. It is not affiliated with, endorsed or supported by
+  E.ON. It uses undocumented interfaces that may change or stop working at any time.
+- You use it **entirely at your own risk and responsibility**. The author accepts no liability
+  for any damage or consequences of its use, in particular for **restriction or blocking of
+  your account**, wrong or missing data (e.g. prices or charging status), or breaches of the
+  service's terms of use.
+- The same applies to **any modifications of the code or settings**, especially shortening
+  the update interval below the defaults. That increases the load on the operator's servers
+  and the risk of being blocked, and it is your own responsibility.
+- Before using it, read the E.ON Drive terms of service and decide for yourself whether
+  using this integration complies with them.
+- The software is provided "as is", without warranty of any kind (see the MIT license).
+
+### Support
+
+The integration is free and open source. If it saves you time or money, you can buy me a
+coffee ☕
+
+[![Buy me a coffee on Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/parzival59520)
+
+Bugs and ideas: [Issues](../../issues).
+
+### License
+
+MIT, see [LICENSE](LICENSE).
