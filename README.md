@@ -1,5 +1,7 @@
 # E.ON Drive pro Home Assistant
 
+[![Podpoř mě na Ko-fi](https://img.shields.io/badge/Ko--fi-kup%20mi%20kafe-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/parzival59520)
+
 Neoficiální integrace veřejné nabíjecí sítě **E.ON Drive (CZ)** do Home Assistantu.
 Čte stejná data jako mobilní aplikace: stav vybraných nabíjecích stojanů, probíhající
 nabíjení a historii nabíjení na tvém účtu.
@@ -150,6 +152,15 @@ pytest
 
 Testy používají jen smyšlená data. **Záznamy z mitmproxy do repozitáře nikdy
 nedávej**, obsahují heslo a tokeny (`.gitignore` je blokuje podle názvu `flows*`).
+
+## Podpora
+
+Integrace je zdarma a open source. Jestli ti šetří čas nebo peníze, můžeš mi
+koupit kafe ☕
+
+[![Podpoř mě na Ko-fi](https://img.shields.io/badge/Ko--fi-kup%20mi%20kafe-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/parzival59520)
+
+Chyby a nápady piš do [Issues](../../issues).
 
 ## Licence
 
